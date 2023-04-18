@@ -6,11 +6,10 @@ using System;
 using Vintagestory.Server;
 using System.Drawing;
 using System.Collections.Generic;
-using Vintagestory.API.Datastructures;
-using Vintagestory.Common;
-using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
-
+using Vintagestory.Client.NoObf;
+using System.Reflection;
+using Vintagestory.Client;
 
 [assembly: ModInfo( "VintageAuth",
 	Description = "Simple auth for offline Vintage Story servers.",
@@ -26,7 +25,10 @@ namespace VintageAuth
 		public static ICoreServerAPI serverApi;
 		public static ICoreAPI commonApi;
 		public static ServerMain serverMain;
+		public static ClientMain clientMain;
 		public static PlayerRole restrictedRole;
+		public static Harmony harmony;
+		public static ServerConnectData serverConnectData;
 
 		public override bool ShouldLoad(EnumAppSide side)
         {
@@ -42,17 +44,55 @@ namespace VintageAuth
 		{
 			commonApi = api;
 		}
+
+		public override void Dispose()
+        {
+            base.Dispose();
+            NetworkHandler.clientChannel = null;
+			NetworkHandler.serverChannel = null;
+            harmony.UnpatchAll(VAConstants.MODID);
+        }
 		
 		public override void StartClientSide(ICoreClientAPI api)
 		{
+			VAConstants.MODVERSION = api.ModLoader.GetMod(VAConstants.MODID).Info.Version;
+			api.World.Logger.Event($"Hello from VintageAuth client ({VAConstants.MODID}, {VAConstants.MODVERSION})!");
+
+			harmony = new Harmony(VAConstants.MODID);
+			MethodInfo minfoOriginalClient = AccessTools.Method(typeof(ClientSystemStartup), "OnAllAssetsLoaded_ClientSystems");
+			if (minfoOriginalClient != null) {
+				MethodInfo clientPrefix = SymbolExtensions.GetMethodInfo(() => ClientPatch.ClientPrefix());
+				harmony.Patch(minfoOriginalClient, new HarmonyMethod(clientPrefix));
+			} else {
+				Console.WriteLine("Failed to hook client harmony, exiting.");
+				return;
+			}
 			NetworkHandler.initClient(api);
-			api.World.Logger.Event("Hello from VintageAuth client");
+			api.Event.PlayerJoin += OnPlayerJoinClient;
 		}
 		
+		private void OnPlayerJoinClient(IClientPlayer byPlayer){
+			Console.WriteLine($"Sum player joined client, {byPlayer}");
+			if (clientMain == null) {
+				return;
+			}
+			if (byPlayer.PlayerName.Equals(clientMain.Player.PlayerName)
+			&& byPlayer.PlayerUID.Equals(clientMain.Player.PlayerUID)) {
+				Console.WriteLine("This player is us!");
+			} else {
+				return;
+			}
+		}
+
 		public override void StartServerSide(ICoreServerAPI api)
 		{
-			api.World.Logger.Notification($"Hello from VintageAuth ({VAConstants.MODID})!");
-			Harmony harmony = new Harmony(VAConstants.MODID);
+			VAConstants.MODVERSION = api.ModLoader.GetMod(VAConstants.MODID).Info.Version;
+			if (!api.Server.IsDedicated) {
+				api.World.Logger.Event("VintageAuth: Non-dedicated server, exiting");
+				return ;
+			}
+			api.World.Logger.Notification($"Hello from VintageAuth server ({VAConstants.MODID}, {VAConstants.MODVERSION})!");
+			harmony = new Harmony(VAConstants.MODID);
 			base.StartServerSide(api);
 			serverApi = api;
 			allowSaving = LoadConfig();
@@ -60,7 +100,13 @@ namespace VintageAuth
 				api.World.Logger.Error("Failed to open VintageAuth database! Not loading");
 				return;
 			}
-			harmony.PatchAll();
+			//harmony.PatchAll();
+			
+			MethodInfo minfoOriginalServer = AccessTools.Method(typeof(ServerMain), "AfterSaveGameLoaded");
+        	MethodInfo mPrefix = SymbolExtensions.GetMethodInfo((ServerMain __instance) => ServerPatch.ServerPrefix(__instance));
+        	harmony.Patch(minfoOriginalServer, new HarmonyMethod(mPrefix), null);
+
+
 			if (DBhandler.GetByUsername(vaConfig.admin_username) == null) {
 				DBhandler.insertUser(vaConfig.admin_username, UuidUtil.uuidFromStr(vaConfig.admin_username), vaConfig.admin_password, true, "admin");
 			}
@@ -68,6 +114,26 @@ namespace VintageAuth
 			NetworkHandler.initServer(api);
 			api.Event.PlayerJoin += OnPlayerJoin;
 			api.Event.RegisterGameTickListener(OnGameTickListener, 20);
+		}
+
+		public static void setClientMain() {
+			Console.WriteLine("setClientMain running...");
+			FieldInfo gameField = typeof(ClientSystemStartup).GetField("game", BindingFlags.NonPublic | BindingFlags.Instance);
+			if (gameField == null) {
+				VintageAuth.commonApi.Logger.Error("Failed to reflect 'game'");
+				return;
+			}
+        	ClientMain clientMainInstance = (ClientMain)gameField.GetValue(ClientSystemStartup.instance);
+			clientMain = clientMainInstance;
+			Console.WriteLine("sneed: " + clientMain);
+
+			FieldInfo connectDataField = ReflectionHelper.GetFieldInfo(typeof(ClientMain), "Connectdata");
+			if (connectDataField == null) {
+				VintageAuth.commonApi.Logger.Error("Failed to reflect 'Connectdata'");
+				return;
+			}
+			serverConnectData = (ServerConnectData)connectDataField.GetValue(clientMain);
+			//Console.WriteLine($"Got server data: {serverConnectData.Host}, {serverConnectData.HostRaw}, {serverConnectData.Port}");
 		}
 
 		private void OnPlayerJoin(IServerPlayer byPlayer)
@@ -81,6 +147,7 @@ namespace VintageAuth
 			byPlayer.SetRole(VAConstants.NOTLOGGEDROLE);
 
 			/* Sends login command info depending if registration is open/closed/token only */
+			byPlayer.SendMessage(GlobalConstants.GeneralChatGroup, vaConfig.vahelp_message.Replace("%ver%", VAConstants.MODVERSION), EnumChatType.Notification);
 			if (vaConfig.registration_allowed) {
 				if (vaConfig.token_needed) {
 					byPlayer.SendMessage(GlobalConstants.GeneralChatGroup, vaConfig.reg_usage_token, EnumChatType.Notification);
@@ -91,6 +158,7 @@ namespace VintageAuth
 				byPlayer.SendMessage(GlobalConstants.GeneralChatGroup, vaConfig.reg_disabled_message, EnumChatType.Notification);
 			}
 			byPlayer.SendMessage(GlobalConstants.GeneralChatGroup, vaConfig.login_usage.Replace("%time%", (VintageAuth.vaConfig.kick_unauthed_after).ToString()), EnumChatType.Notification);
+			NetworkHandler.serverChannel.BroadcastPacket(new WelcomeNetworkMessage(){message = "welcome"}, PlayerUtil.getRestrictedPlayers(byPlayer.PlayerName));
 			byPlayer.WorldData.CurrentGameMode = EnumGameMode.Guest;
 			KickHandler.KickIfUnauthed(byPlayer);
         }

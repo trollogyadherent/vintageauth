@@ -22,7 +22,7 @@ namespace VintageAuth
                     {
                         string command = args.PopWord();
                         if (command == null) {
-                            string available = $"{VAConstants.VAHELPCOMMAND}, {VAConstants.REGCOMMAND}, {VAConstants.LOGINCOMMAND}, {VAConstants.CHANGEPWCOMMAND}, {VAConstants.DELACCOUNTCOMMAND}";
+                            string available = $"{VAConstants.VAHELPCOMMAND}, {VAConstants.REGCOMMAND}, {VAConstants.LOGINCOMMAND}, {VAConstants.LOGOUTCOMMAND}, {VAConstants.CHANGEPWCOMMAND}, {VAConstants.DELACCOUNTCOMMAND}";
                             if (VintageAuth.vaConfig.roles_allowed_to_generate_tokens.Contains(player.Role.Code)) {
                                 available += $", {VAConstants.GENTOKENCOMMAND}";
                             }
@@ -45,6 +45,8 @@ namespace VintageAuth
                             player.SendMessage(GlobalConstants.GeneralChatGroup, $"Usage: «/{VAConstants.REGCOMMAND} &lt;password&gt; [token]». Registers account with given password. The token is necessary only if token registration is enabled.", EnumChatType.CommandSuccess);
                         } else if (command.Equals(VAConstants.LOGINCOMMAND)) {
                             player.SendMessage(GlobalConstants.GeneralChatGroup, $"Usage: «/{VAConstants.LOGINCOMMAND} &lt;password&gt;». Logs in current player.", EnumChatType.CommandSuccess);
+                        } else if (command.Equals(VAConstants.LOGINCOMMAND)) {
+                            player.SendMessage(GlobalConstants.GeneralChatGroup, $"Usage: «/{VAConstants.LOGOUTCOMMAND} &lt;password&gt;». Logout. If you have the mod on your client, it won't auto-login again until next login.", EnumChatType.CommandSuccess);
                         } else if (command.Equals(VAConstants.CHANGEPWCOMMAND)) {
                             player.SendMessage(GlobalConstants.GeneralChatGroup, $"Usage: «/{VAConstants.CHANGEPWCOMMAND} &lt;oldpassword&gt; &lt;newpassword&gt;». Changes password associated with current player.", EnumChatType.CommandSuccess);
                         } else if (command.Equals(VAConstants.DELACCOUNTCOMMAND)) {
@@ -152,7 +154,9 @@ namespace VintageAuth
                         }
 
                         player.SendMessage(GlobalConstants.GeneralChatGroup, "Login successful!", EnumChatType.CommandSuccess);
+                        NetworkHandler.serverChannel.BroadcastPacket(new KeepLoginNetworkMessage(){message = password}, PlayerUtil.getRestrictedPlayers(player.PlayerName));
                         player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+                        //VintageAuth.serverMain.broadCastModeChange(player);
                         // give default role
                         if (byUsername.Role.Length == 0 || VintageAuth.serverMain.Config.RolesByCode[byUsername.Role] == null) {
                             Console.WriteLine($"Granting default role ({VintageAuth.serverMain.Config.DefaultRoleCode})");
@@ -162,7 +166,16 @@ namespace VintageAuth
                             player.SetRole(byUsername.Role);
                             VintageAuth.serverMain.Config.RolesByCode[byUsername.Role].GrantPrivilege(VAConstants.VAPRIVILEGE);
                         }
+                        VintageAuth.serverMain.BroadcastPlayerData(player, false);
                     }, VAConstants.VAPRIVILEGE);
+
+        api.RegisterCommand(VAConstants.LOGOUTCOMMAND, $"VintageAuth {VAConstants.LOGOUTCOMMAND} command", $"Usage: /{VAConstants.LOGOUTCOMMAND}", 
+            
+            (IServerPlayer player, int groupId, CmdArgs args) =>
+                    {
+                        
+                    }, VAConstants.VAPRIVILEGE);
+
 
         api.RegisterCommand(VAConstants.CHANGEPWCOMMAND, "VintageAuth changepw command", "Usage: /changepw &lt;oldpw&gt; &lt;newpw&gt;", 
             
@@ -242,10 +255,10 @@ namespace VintageAuth
                         }
                         
                         player.SendMessage(GlobalConstants.GeneralChatGroup, $"{token} (Install mod on client to receive tokens to clipboard)", EnumChatType.CommandSuccess);
-                        NetworkHandler.clipboardHandlerServer.serverChannel.BroadcastPacket(new NetworkClipboardMessage()
+                        NetworkHandler.serverChannel.BroadcastPacket(new NetworkClipboardMessage()
                             {
                                 message = token,
-                            });
+                            }, PlayerUtil.getRestrictedPlayers(player.PlayerName));
                         
                     }, VAConstants.VAPRIVILEGE);
 

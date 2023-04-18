@@ -1,10 +1,15 @@
+using Vintagestory.API.Config;
+using System.IO;
+
 namespace VintageAuth
 {
 	public class VAConstants
 	{
         public readonly static string MODID = "vintageauth";
+        public static string MODVERSION = "%MODVERSION%";
         public readonly static string MODNAME = "Vintageauth";
         public readonly static string CONFIGNAME = MODID + ".json";
+        public readonly static string SERVERCREDSPATH = Path.Combine(GamePaths.ModConfig, "va_servers.json");
         public readonly static string NOTLOGGEDROLE = "notloggedin";
         public readonly static string VAHELPCOMMAND = "vahelp";
         public readonly static string REGCOMMAND = "register";
@@ -17,8 +22,9 @@ namespace VintageAuth
         public readonly static string VABANCOMMAND = "vaban";
         public readonly static string CHANGEROLECOMMAND = "changerole";
         public readonly static string GETUSERCOMMAND = "getuser";
+        public readonly static string LOGOUTCOMMAND = "logout";
         public readonly static string VAPRIVILEGE = "vaprivilege";
-        public readonly static string NETWORKCLIPBOARDCHANNEL = "va_clipboard";
+        public readonly static string VINTAGEAUTHNETWORKCHANNEL = "va_channel";
         public readonly static string DEFAULTADMINUSERNAME = "va_admin";
     }
 }

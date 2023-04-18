@@ -2,7 +2,7 @@
 	"type": "code",
 	"name": "VintageAuth",
 	"modid": "vintageauth",
-	"version": "0.0.1",
+	"version": "%MODVERSION%",
 	
 	"description" : "Simple auth for offline Vintage Story servers.",
 	"website": "https://www.mcdrama.net/articles/mods.html",

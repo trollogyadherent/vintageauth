@@ -36,6 +36,7 @@ public class DBhandler {
          catch (Exception ex)
          {
             Console.WriteLine("VintageAuth: Failed to create database!");
+            Console.WriteLine(ex.Message);
             return null;
          }
          return sqlite_conn;

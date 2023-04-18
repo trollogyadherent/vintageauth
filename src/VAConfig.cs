@@ -9,7 +9,7 @@ namespace VintageAuth
         public string[] roles_allowed_to_deactivate_accounts = {"admin"};
         public string[] roles_allowed_to_ban_accounts = {"admin"};
         public string[] roles_allowed_to_change_account_roles = {"admin"};
-        public string vahelp_message = "Use '/vahelp [command]' for VintageAuth help";
+        public string vahelp_message = "Use '/vahelp [command]' for VintageAuth (%ver%) help. Install the mod on your client to auto login.";
         public string reg_disabled_message = "Registration is disabled.";
         public string reg_usage_no_token = "Use '/register password' to create an account.";
         public string reg_usage_token = "Use '/register password invite_token' to create an account.";
