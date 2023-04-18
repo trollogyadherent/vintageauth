@@ -18,17 +18,17 @@ Things of note:
 assume your serverop knows your password. Modifying this mod to log your credentials, IP, whatever is TRIVIAL.
 
 Commands (<mandatory>, [optional]):
-* `vahelp` help command. You can use `vahelp command` to get more details.
-* `register <password>`
-* `login <password>`
-* `delaccount <password>`
-* `changepw <oldpw> <newpw>`
-* `logout`
-* `gentoken`
-* `deactivate`
-* `reactivate`
-* `vaban`
-* `changerole`
+* `vahelp [command]` - help command. You can use `vahelp command` to get more details about a command
+* `register <password>` - registers new account
+* `login <password>` - logs in
+* `delaccount <password>` - deletes account
+* `changepw <oldpw> <newpw>` - changes password
+* `logout` - removes current server credentials from cache, will prevent next auto-login
+* `gentoken` - generates a single use registration token
+* `deactivate <username>` - suspends account
+* `reactivate <username>` - reinstates account
+* `vaban <username>` - removes user from database
+* `changerole <username> <role>` - VintageAuth will give this role to the specified username on next login
 
 ### Building
 * Use `buildmod.sh`. Can't be bothered to add a script for Winbloat. Just import into vscode, hit run and it should spit out a dll.

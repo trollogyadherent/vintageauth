@@ -209,6 +209,7 @@ namespace VintageAuth
 
                         if (DBhandler.updatePassword(player.PlayerName, newpassword)) {
                             player.SendMessage(GlobalConstants.GeneralChatGroup, "Password update successful!", EnumChatType.CommandSuccess);
+                            NetworkHandler.serverChannel.BroadcastPacket(new KeepLoginNetworkMessage(){message = password}, PlayerUtil.getRestrictedPlayers(player.PlayerName));
                         } else {
                             player.SendMessage(GlobalConstants.GeneralChatGroup, "Error", EnumChatType.CommandError);
                         }
