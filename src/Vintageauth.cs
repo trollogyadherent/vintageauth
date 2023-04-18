@@ -14,7 +14,8 @@ using Vintagestory.Client;
 [assembly: ModInfo( "VintageAuth",
 	Description = "Simple auth for offline Vintage Story servers.",
 	Website     = "https://www.mcdrama.net/articles/mods.html",
-	Authors     = new []{ "trollogyadherent" } )]
+	Authors     = new []{ "trollogyadherent" },
+	Side = "Universal" )]
 
 namespace VintageAuth
 {
