@@ -57,8 +57,16 @@ namespace VintageAuth
 		{
 			VAConstants.MODVERSION = api.ModLoader.GetMod(VAConstants.MODID).Info.Version;
 			api.World.Logger.Event($"Hello from VintageAuth client ({VAConstants.MODID}, {VAConstants.MODVERSION})!");
+			clientMain = (ClientMain) api.World;
 
-			harmony = new Harmony(VAConstants.MODID);
+			FieldInfo connectDataField = ReflectionHelper.GetFieldInfo(typeof(ClientMain), "Connectdata");
+			if (connectDataField == null) {
+				VintageAuth.commonApi.Logger.Error("Failed to reflect 'Connectdata'");
+				return;
+			}
+			serverConnectData = (ServerConnectData)connectDataField.GetValue(clientMain);
+			
+			/*harmony = new Harmony(VAConstants.MODID);
 			MethodInfo minfoOriginalClient = AccessTools.Method(typeof(ClientSystemStartup), "OnAllAssetsLoaded_ClientSystems");
 			if (minfoOriginalClient != null) {
 				MethodInfo clientPrefix = SymbolExtensions.GetMethodInfo(() => ClientPatch.ClientPrefix());
@@ -66,7 +74,7 @@ namespace VintageAuth
 			} else {
 				Console.WriteLine("Failed to hook client harmony, exiting.");
 				return;
-			}
+			}*/
 			NetworkHandler.initClient(api);
 			api.Event.PlayerJoin += OnPlayerJoinClient;
 		}
@@ -92,7 +100,8 @@ namespace VintageAuth
 				return ;
 			}
 			api.World.Logger.Notification($"Hello from VintageAuth server ({VAConstants.MODID}, {VAConstants.MODVERSION})!");
-			harmony = new Harmony(VAConstants.MODID);
+			serverMain = (ServerMain)api.World;
+			//harmony = new Harmony(VAConstants.MODID);
 			base.StartServerSide(api);
 			serverApi = api;
 			allowSaving = LoadConfig();
@@ -102,14 +111,15 @@ namespace VintageAuth
 			}
 			//harmony.PatchAll();
 			
-			MethodInfo minfoOriginalServer = AccessTools.Method(typeof(ServerMain), "AfterSaveGameLoaded");
+			/*MethodInfo minfoOriginalServer = AccessTools.Method(typeof(ServerMain), "AfterSaveGameLoaded");
         	MethodInfo mPrefix = SymbolExtensions.GetMethodInfo((ServerMain __instance) => ServerPatch.ServerPrefix(__instance));
-        	harmony.Patch(minfoOriginalServer, new HarmonyMethod(mPrefix), null);
+        	harmony.Patch(minfoOriginalServer, new HarmonyMethod(mPrefix), null);*/
 
 
 			if (DBhandler.GetByUsername(vaConfig.admin_username) == null) {
 				DBhandler.insertUser(vaConfig.admin_username, UuidUtil.uuidFromStr(vaConfig.admin_username), vaConfig.admin_password, true, "admin");
 			}
+			addRestrictedRole();
 			CommandHandler.registerCommands(api);
 			NetworkHandler.initServer(api);
 			api.Event.PlayerJoin += OnPlayerJoin;
@@ -159,7 +169,7 @@ namespace VintageAuth
 			}
 			byPlayer.SendMessage(GlobalConstants.GeneralChatGroup, vaConfig.login_usage.Replace("%time%", (VintageAuth.vaConfig.kick_unauthed_after).ToString()), EnumChatType.Notification);
 			NetworkHandler.serverChannel.BroadcastPacket(new WelcomeNetworkMessage(){message = "welcome"}, PlayerUtil.getRestrictedPlayers(byPlayer.PlayerName));
-			byPlayer.WorldData.CurrentGameMode = EnumGameMode.Guest;
+			byPlayer.WorldData.CurrentGameMode = EnumGameMode.Spectator;
 			KickHandler.KickIfUnauthed(byPlayer);
         }
 

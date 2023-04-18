@@ -62,21 +62,23 @@ public static class ServerCredHandler {
     }
 
     private static Dictionary<string, string> LoadCredentials()
+{
+    Dictionary<string, string> credentials;
+
+    if (File.Exists(VAConstants.SERVERCREDSPATH))
     {
-        Dictionary<string, string> credentials;
-
-        if (File.Exists(VAConstants.SERVERCREDSPATH))
-        {
-            string json = File.ReadAllText(VAConstants.SERVERCREDSPATH);
-            credentials = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
-        }
-        else
-        {
-            credentials = new Dictionary<string, string>();
-        }
-
-        return credentials;
+        string json = File.ReadAllText(VAConstants.SERVERCREDSPATH);
+        credentials = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
     }
+    else
+    {
+        // Create directory structure if it doesn't exist
+        Directory.CreateDirectory(Path.GetDirectoryName(VAConstants.SERVERCREDSPATH));
+        credentials = new Dictionary<string, string>();
+    }
+
+    return credentials;
+}
 
     private static void SaveCredentialsToFile(Dictionary<string, string> credentials)
     {

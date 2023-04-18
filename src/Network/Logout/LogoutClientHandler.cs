@@ -16,6 +16,7 @@ namespace VintageAuth {
             Console.WriteLine($"received logout packet message {networkMessage.message}, logging out");
             string serverident = ServerCredHandler.connectDataToId(VintageAuth.serverConnectData);
             ServerCredHandler.RemoveCredentials(serverident);
+            clientApi.ShowChatMessage("Removed credentials from cache");
         }
     }
 }

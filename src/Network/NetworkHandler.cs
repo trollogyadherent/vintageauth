@@ -21,6 +21,8 @@ namespace VintageAuth {
             keepLoginServerHandler.start();
             WelcomeServerHandler welcomeServerHandler = new WelcomeServerHandler();
             welcomeServerHandler.start();
+            LogoutServerHandler logoutServerHandler = new LogoutServerHandler();
+            logoutServerHandler.start();
         }
 
         public static void initClient(ICoreClientAPI clientApi) {
@@ -34,6 +36,8 @@ namespace VintageAuth {
             keepLoginClientHandler.start(capi);
             WelcomeClientHandler welcomeClientHandler = new WelcomeClientHandler();
             welcomeClientHandler.start(capi);
+            LogoutClientHandler logoutClientHandler = new LogoutClientHandler();
+            logoutClientHandler.start(capi);
         }
     }
 }

@@ -18,7 +18,7 @@ namespace VintageAuth
         public int max_unauthenticated_walk_distance = 5;
         public string admin_username = VAConstants.DEFAULTADMINUSERNAME;
         public string admin_password = PasswordUtil.GenerateSecureHash(10);
-        public int kick_unauthed_after = 60;
+        public int kick_unauthed_after = 120;
         public string unauthed_kick_message = "Login time exceeded (%time%) seconds.";
         public string deac_kick_message = "You have been deactivated ;_;";
         public string banned_kick_message = "You have been banned ;_;";

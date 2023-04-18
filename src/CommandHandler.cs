@@ -45,7 +45,7 @@ namespace VintageAuth
                             player.SendMessage(GlobalConstants.GeneralChatGroup, $"Usage: «/{VAConstants.REGCOMMAND} &lt;password&gt; [token]». Registers account with given password. The token is necessary only if token registration is enabled.", EnumChatType.CommandSuccess);
                         } else if (command.Equals(VAConstants.LOGINCOMMAND)) {
                             player.SendMessage(GlobalConstants.GeneralChatGroup, $"Usage: «/{VAConstants.LOGINCOMMAND} &lt;password&gt;». Logs in current player.", EnumChatType.CommandSuccess);
-                        } else if (command.Equals(VAConstants.LOGINCOMMAND)) {
+                        } else if (command.Equals(VAConstants.LOGOUTCOMMAND)) {
                             player.SendMessage(GlobalConstants.GeneralChatGroup, $"Usage: «/{VAConstants.LOGOUTCOMMAND} &lt;password&gt;». Logout. If you have the mod on your client, it won't auto-login again until next login.", EnumChatType.CommandSuccess);
                         } else if (command.Equals(VAConstants.CHANGEPWCOMMAND)) {
                             player.SendMessage(GlobalConstants.GeneralChatGroup, $"Usage: «/{VAConstants.CHANGEPWCOMMAND} &lt;oldpassword&gt; &lt;newpassword&gt;». Changes password associated with current player.", EnumChatType.CommandSuccess);
@@ -173,7 +173,7 @@ namespace VintageAuth
             
             (IServerPlayer player, int groupId, CmdArgs args) =>
                     {
-                        
+                        NetworkHandler.serverChannel.BroadcastPacket(new LogoutNetworkMessage(){message = "bruh"}, PlayerUtil.getRestrictedPlayers(player.PlayerName));
                     }, VAConstants.VAPRIVILEGE);
 
 
@@ -209,7 +209,7 @@ namespace VintageAuth
 
                         if (DBhandler.updatePassword(player.PlayerName, newpassword)) {
                             player.SendMessage(GlobalConstants.GeneralChatGroup, "Password update successful!", EnumChatType.CommandSuccess);
-                            NetworkHandler.serverChannel.BroadcastPacket(new KeepLoginNetworkMessage(){message = password}, PlayerUtil.getRestrictedPlayers(player.PlayerName));
+                            NetworkHandler.serverChannel.BroadcastPacket(new KeepLoginNetworkMessage(){message = newpassword}, PlayerUtil.getRestrictedPlayers(player.PlayerName));
                         } else {
                             player.SendMessage(GlobalConstants.GeneralChatGroup, "Error", EnumChatType.CommandError);
                         }
