@@ -1,10 +1,6 @@
 using System;
 using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace VintageAuth {
     public class ClipboardHandler {
@@ -17,11 +13,9 @@ namespace VintageAuth {
         }
         public static void CopyTextSync(string text)
         {
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-            {
-                System.Windows.Forms.Clipboard.SetText(text);
-            }
-            else if (Environment.OSVersion.Platform == PlatformID.Unix)
+            Console.WriteLine($"Copying text {text} to clipboard");
+            VintageAuth.platform.XPlatInterface.SetClipboardText(text);
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 bool xselInstalled = false;
                 bool wlCopyInstalled = false;

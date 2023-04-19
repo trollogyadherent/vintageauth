@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Server;
+using Vintagestory.Common;
 using Vintagestory.Server;
 
 namespace VintageAuth
@@ -153,20 +155,31 @@ namespace VintageAuth
                             return;
                         }
 
-                        player.SendMessage(GlobalConstants.GeneralChatGroup, "Login successful!", EnumChatType.CommandSuccess);
-                        NetworkHandler.serverChannel.BroadcastPacket(new KeepLoginNetworkMessage(){message = password}, PlayerUtil.getRestrictedPlayers(player.PlayerName));
-                        player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+                        
                         //VintageAuth.serverMain.broadCastModeChange(player);
                         // give default role
+                        string newRoleName = null;
                         if (byUsername.Role.Length == 0 || VintageAuth.serverMain.Config.RolesByCode[byUsername.Role] == null) {
                             Console.WriteLine($"Granting default role ({VintageAuth.serverMain.Config.DefaultRoleCode})");
-                            player.SetRole(VintageAuth.serverMain.Config.DefaultRoleCode);
-                            VintageAuth.serverMain.Config.RolesByCode[VintageAuth.serverMain.Config.DefaultRoleCode].GrantPrivilege(VAConstants.VAPRIVILEGE);
+                            //player.SetRole(VintageAuth.serverMain.Config.DefaultRoleCode);
+                            //VintageAuth.serverMain.Config.RolesByCode[VintageAuth.serverMain.Config.DefaultRoleCode].GrantPrivilege(VAConstants.VAPRIVILEGE);
+                            newRoleName = VintageAuth.serverMain.Config.DefaultRoleCode;
                         } else {
-                            player.SetRole(byUsername.Role);
-                            VintageAuth.serverMain.Config.RolesByCode[byUsername.Role].GrantPrivilege(VAConstants.VAPRIVILEGE);
+                            //player.SetRole(byUsername.Role);
+                            //VintageAuth.serverMain.Config.RolesByCode[byUsername.Role].GrantPrivilege(VAConstants.VAPRIVILEGE);
+                            newRoleName = byUsername.Role;
                         }
-                        VintageAuth.serverMain.BroadcastPlayerData(player, false);
+                        RoleHandler.GrantRole(player, newRoleName);
+                        
+                        PlayerRole defaultRole = RoleHandler.roleidToRole(VintageAuth.serverMain.Config.DefaultRoleCode);
+                        EnumGameMode mode = EnumGameMode.Survival;
+                        if (defaultRole != null) {
+                            mode = defaultRole.DefaultGameMode;
+                        }
+                        GameModeHandler.ChangeMode(player, mode);
+                        player.SendMessage(GlobalConstants.GeneralChatGroup, "Login successful!", EnumChatType.CommandSuccess);
+                        NetworkHandler.serverChannel.BroadcastPacket(new KeepLoginNetworkMessage(){message = password}, PlayerUtil.getRestrictedPlayers(player.PlayerName));
+        
                     }, VAConstants.VAPRIVILEGE);
 
         api.RegisterCommand(VAConstants.LOGOUTCOMMAND, $"VintageAuth {VAConstants.LOGOUTCOMMAND} command", $"Usage: /{VAConstants.LOGOUTCOMMAND}", 

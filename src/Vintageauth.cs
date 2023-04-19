@@ -10,6 +10,8 @@ using Vintagestory.API.Config;
 using Vintagestory.Client.NoObf;
 using System.Reflection;
 using Vintagestory.Client;
+using Vintagestory.Common;
+using Vintagestory.API.Util;
 
 [assembly: ModInfo( "VintageAuth",
 	Description = "Simple auth for offline Vintage Story servers.",
@@ -27,9 +29,13 @@ namespace VintageAuth
 		public static ICoreAPI commonApi;
 		public static ServerMain serverMain;
 		public static ClientMain clientMain;
-		public static PlayerRole restrictedRole;
+		public static Vintagestory.Common.PlayerRole restrictedRole;
 		public static Harmony harmony;
 		public static ServerConnectData serverConnectData;
+		public static Vintagestory.Client.NoObf.ClientPlatformAbstract platform;
+		public static ServerSystem[] serverSystem;
+		//Vintagestory.Common
+	
 
 		public override bool ShouldLoad(EnumAppSide side)
         {
@@ -60,12 +66,7 @@ namespace VintageAuth
 			api.World.Logger.Event($"Hello from VintageAuth client ({VAConstants.MODID}, {VAConstants.MODVERSION})!");
 			clientMain = (ClientMain) api.World;
 
-			FieldInfo connectDataField = ReflectionHelper.GetFieldInfo(typeof(ClientMain), "Connectdata");
-			if (connectDataField == null) {
-				VintageAuth.commonApi.Logger.Error("Failed to reflect 'Connectdata'");
-				return;
-			}
-			serverConnectData = (ServerConnectData)connectDataField.GetValue(clientMain);
+			DoReflectionClient();
 			
 			/*harmony = new Harmony(VAConstants.MODID);
 			MethodInfo minfoOriginalClient = AccessTools.Method(typeof(ClientSystemStartup), "OnAllAssetsLoaded_ClientSystems");
@@ -77,7 +78,10 @@ namespace VintageAuth
 				return;
 			}*/
 			NetworkHandler.initClient(api);
+			Console.WriteLine("REGISTERING HECKING PLAYERJOIN");
 			api.Event.PlayerJoin += OnPlayerJoinClient;
+			//api.Event.IsPlayerReady += OnPlayerJoinClient;
+			//api.Event.PlayerEntitySpawn += OnPlayerJoinClient;
 		}
 		
 		private void OnPlayerJoinClient(IClientPlayer byPlayer){
@@ -102,6 +106,7 @@ namespace VintageAuth
 			}
 			api.World.Logger.Notification($"Hello from VintageAuth server ({VAConstants.MODID}, {VAConstants.MODVERSION})!");
 			serverMain = (ServerMain)api.World;
+			DoReflectionServer();
 			//harmony = new Harmony(VAConstants.MODID);
 			base.StartServerSide(api);
 			serverApi = api;
@@ -123,7 +128,8 @@ namespace VintageAuth
 			addRestrictedRole();
 			CommandHandler.registerCommands(api);
 			NetworkHandler.initServer(api);
-			api.Event.PlayerJoin += OnPlayerJoin;
+			api.Event.PlayerNowPlaying += OnPlayerJoin;
+			//api.Event.
 			api.Event.RegisterGameTickListener(OnGameTickListener, 20);
 		}
 
@@ -155,8 +161,13 @@ namespace VintageAuth
 			Console.WriteLine(byPlayer.PlayerName);
 			Console.WriteLine(byPlayer.PlayerUID);
 			Console.WriteLine(byPlayer.Role);
-			byPlayer.SetRole(VAConstants.NOTLOGGEDROLE);
+			//byPlayer.Privileges.Append(VAConstants.VAPRIVILEGE);
+			ServerPlayerData plrdata = serverMain.PlayerDataManager.GetOrCreateServerPlayerData(byPlayer.PlayerUID, byPlayer.PlayerName);
+			plrdata.GrantPrivilege(VAConstants.VAPRIVILEGE);
+			serverMain.PlayerDataManager.playerDataDirty = true;
+			serverMain.SendOwnPlayerData(byPlayer, false, true);
 
+			RoleHandler.GrantRole(byPlayer, VAConstants.NOTLOGGEDROLE);
 			/* Sends login command info depending if registration is open/closed/token only */
 			byPlayer.SendMessage(GlobalConstants.GeneralChatGroup, vaConfig.vahelp_message.Replace("%ver%", VAConstants.MODVERSION), EnumChatType.Notification);
 			if (vaConfig.registration_allowed) {
@@ -168,9 +179,9 @@ namespace VintageAuth
 			} else {
 				byPlayer.SendMessage(GlobalConstants.GeneralChatGroup, vaConfig.reg_disabled_message, EnumChatType.Notification);
 			}
+			GameModeHandler.ChangeMode(byPlayer, EnumGameMode.Spectator);
 			byPlayer.SendMessage(GlobalConstants.GeneralChatGroup, vaConfig.login_usage.Replace("%time%", (VintageAuth.vaConfig.kick_unauthed_after).ToString()), EnumChatType.Notification);
 			NetworkHandler.serverChannel.BroadcastPacket(new WelcomeNetworkMessage(){message = "welcome"}, PlayerUtil.getRestrictedPlayers(byPlayer.PlayerName));
-			byPlayer.WorldData.CurrentGameMode = EnumGameMode.Spectator;
 			KickHandler.KickIfUnauthed(byPlayer);
         }
 
@@ -191,7 +202,7 @@ namespace VintageAuth
 		}
 
 		public static void addRestrictedRole() {
-			restrictedRole = new PlayerRole{
+			restrictedRole = new Vintagestory.Common.PlayerRole {
 				Code = VAConstants.NOTLOGGEDROLE,
 				Name = "Not Logged In",
 				Description = "VintageAuth role for unathenticated users.",
@@ -237,6 +248,33 @@ namespace VintageAuth
 
 		public static void Log(string message) {
 			serverApi.World.Logger.Notification(message);
+		}
+
+		static void DoReflectionClient() {
+			FieldInfo connectDataField = ReflectionHelper.GetFieldInfo(typeof(ClientMain), "Connectdata");
+			if (connectDataField == null) {
+				VintageAuth.commonApi.Logger.Error("Failed to reflect 'Connectdata'");
+			} else {
+				serverConnectData = (ServerConnectData)connectDataField.GetValue(clientMain);
+			}
+			
+			FieldInfo platformDataField = ReflectionHelper.GetFieldInfo(typeof(ClientMain), "Platform");
+			if (platformDataField == null) {
+				
+				VintageAuth.commonApi.Logger.Error("Failed to reflect 'Connectdata'");
+			} else {
+				platform = (ClientPlatformAbstract)platformDataField.GetValue(clientMain);
+			}
+			
+		}
+
+		static void DoReflectionServer() {
+			FieldInfo serverSystemField = ReflectionHelper.GetFieldInfo(typeof(ServerMain), "Systems");
+			if (serverSystemField == null) {
+				VintageAuth.commonApi.Logger.Error("Failed to reflect 'serverSystemField'");
+			} else {
+				serverSystem = (ServerSystem[])serverSystemField.GetValue(serverMain);
+			}
 		}
 	}
 }

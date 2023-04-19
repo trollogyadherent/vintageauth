@@ -24,10 +24,6 @@
 			<HintPath>$(VINTAGE_STORY)/Lib/protobuf-net.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
-		<Reference Include="Forms">
-			<HintPath>$(VINTAGE_STORY)/Lib/System.Windows.Forms.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
 		<Reference Include="Newtonsoft">
 			<HintPath>$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll</HintPath>
 			<Private>false</Private>
