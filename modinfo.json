@@ -13,5 +13,5 @@
 	},
 	"side": "Universal",
 	"requiredOnClient": false,
-	"requiredOnServer": true
+	"requiredOnServer": false
 }

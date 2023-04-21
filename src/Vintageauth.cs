@@ -17,7 +17,7 @@ using Vintagestory.API.Util;
 	Description = "Simple auth for offline Vintage Story servers.",
 	Website     = "https://www.mcdrama.net/articles/mods.html",
 	Authors     = new []{ "trollogyadherent" },
-	Side = "Universal" )]
+	Side = "Universal", RequiredOnClient = false, RequiredOnServer = false )]
 
 namespace VintageAuth
 {
