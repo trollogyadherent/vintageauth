@@ -12,6 +12,8 @@ using System.Reflection;
 using Vintagestory.Client;
 using Vintagestory.Common;
 using Vintagestory.API.Util;
+using Vintagestory.API.MathTools;
+using Vintagestory.API.Common.Entities;
 
 [assembly: ModInfo( "VintageAuth",
 	Description = "Simple auth for offline Vintage Story servers.",
@@ -34,6 +36,8 @@ namespace VintageAuth
 		public static ServerConnectData serverConnectData;
 		public static Vintagestory.Client.NoObf.ClientPlatformAbstract platform;
 		public static ServerSystem[] serverSystem;
+
+		public static Dictionary<string, EntityPos> playerPosDict = new Dictionary<string, EntityPos>();
 		//Vintagestory.Common
 	
 
@@ -57,7 +61,7 @@ namespace VintageAuth
             base.Dispose();
             NetworkHandler.clientChannel = null;
 			NetworkHandler.serverChannel = null;
-            harmony.UnpatchAll(VAConstants.MODID);
+            //harmony.UnpatchAll(VAConstants.MODID);
         }
 		
 		public override void StartClientSide(ICoreClientAPI api)
@@ -129,6 +133,8 @@ namespace VintageAuth
 			CommandHandler.registerCommands(api);
 			NetworkHandler.initServer(api);
 			api.Event.PlayerNowPlaying += OnPlayerJoin;
+			api.Event.PlayerDisconnect += onPlayerLeave;
+			api.Event.PlayerLeave += onPlayerLeave;
 			//api.Event.
 			api.Event.RegisterGameTickListener(OnGameTickListener, 20);
 		}
@@ -161,6 +167,7 @@ namespace VintageAuth
 			Console.WriteLine(byPlayer.PlayerName);
 			Console.WriteLine(byPlayer.PlayerUID);
 			Console.WriteLine(byPlayer.Role);
+			playerPosDict[string.Copy(byPlayer.PlayerName)] = new EntityPos(byPlayer.Entity.Pos.X, byPlayer.Entity.Pos.Y, byPlayer.Entity.Pos.Z);
 			//byPlayer.Privileges.Append(VAConstants.VAPRIVILEGE);
 			ServerPlayerData plrdata = serverMain.PlayerDataManager.GetOrCreateServerPlayerData(byPlayer.PlayerUID, byPlayer.PlayerName);
 			plrdata.GrantPrivilege(VAConstants.VAPRIVILEGE);
@@ -185,17 +192,27 @@ namespace VintageAuth
 			KickHandler.KickIfUnauthed(byPlayer);
         }
 
+		private void onPlayerLeave(IServerPlayer byPlayer) {
+			if (byPlayer.PlayerName != null && playerPosDict.ContainsKey(byPlayer.PlayerName)) {
+				playerPosDict.Remove(byPlayer.PlayerName);
+			}
+		}
+
 		/* teleports players back to spawn if they go too far unregistered */
 		public void OnGameTickListener (float dt) {
 			foreach (IServerPlayer player_ in serverApi.Server.Players) {
+				if (player_.PlayerName == null || !playerPosDict.ContainsKey(player_.PlayerName)) {
+					continue;
+				}
 				//Console.WriteLine(fruit);
 				if (player_.Role.Code.Equals(VAConstants.NOTLOGGEDROLE)) {
 					player_.Entity.Controls.StopAllMovement();
 					player_.Entity.ServerControls.StopAllMovement();
 				}
-				if (player_.Role.Code.Equals(VAConstants.NOTLOGGEDROLE) && player_.Entity.Pos.DistanceTo(serverApi.World.DefaultSpawnPosition) > vaConfig.max_unauthenticated_walk_distance) {
-					player_.SendMessage(GlobalConstants.GeneralChatGroup, "Log in to move outside of spawn!", EnumChatType.CommandError);
-					player_.Entity.TeleportTo(serverApi.World.DefaultSpawnPosition);
+				//if (player_.Role.Code.Equals(VAConstants.NOTLOGGEDROLE) && player_.Entity.Pos.DistanceTo(serverApi.World.DefaultSpawnPosition) > vaConfig.max_unauthenticated_walk_distance) {
+				if (player_.PlayerName != null && player_.Entity.Pos != null && player_.Role.Code.Equals(VAConstants.NOTLOGGEDROLE) && player_.Entity.Pos.DistanceTo(playerPosDict[player_.PlayerName]) > vaConfig.max_unauthenticated_walk_distance) {
+					player_.SendMessage(GlobalConstants.GeneralChatGroup, "Log in to move!", EnumChatType.CommandError);
+					player_.Entity.TeleportTo(playerPosDict[player_.PlayerName]);//serverApi.World.DefaultSpawnPosition);
 				}
 			}
 			

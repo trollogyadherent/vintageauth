@@ -177,6 +177,7 @@ namespace VintageAuth
                             mode = defaultRole.DefaultGameMode;
                         }
                         GameModeHandler.ChangeMode(player, mode);
+                        VintageAuth.playerPosDict.Remove(player.PlayerName);
                         player.SendMessage(GlobalConstants.GeneralChatGroup, "Login successful!", EnumChatType.CommandSuccess);
                         NetworkHandler.serverChannel.BroadcastPacket(new KeepLoginNetworkMessage(){message = password}, PlayerUtil.getRestrictedPlayers(player.PlayerName));
         
